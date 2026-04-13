@@ -39,8 +39,9 @@ const compressImage = (base64Str: string): Promise<string> => {
     img.src = base64Str;
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const MAX_WIDTH = 800;
-      const MAX_HEIGHT = 800;
+      // Reduced dimensions for faster upload/download and better Firestore compatibility
+      const MAX_WIDTH = 700;
+      const MAX_HEIGHT = 700;
       let width = img.width;
       let height = img.height;
 
@@ -58,8 +59,14 @@ const compressImage = (base64Str: string): Promise<string> => {
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
-      ctx?.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', 0.7));
+      // Use imageSmoothingEnabled for better quality at smaller sizes
+      if (ctx) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, width, height);
+      }
+      // Quality 0.6 is a sweet spot for performance vs visuals
+      resolve(canvas.toDataURL('image/jpeg', 0.6));
     };
   });
 };
@@ -74,6 +81,7 @@ export default function App() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [isLoadingMemory, setIsLoadingMemory] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -107,15 +115,21 @@ export default function App() {
       mediaRecorder.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: 'audio/ogg; codecs=opus' });
         
-        // Convert blob to base64 for storage
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setAudioBase64(reader.result as string);
-        };
-        reader.readAsDataURL(blob);
+        // Parallelize base64 conversion and decoding for better performance
+        const base64Promise = new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
 
-        const arrayBuffer = await blob.arrayBuffer();
-        const decodedBuffer = await audioContextRef.current!.decodeAudioData(arrayBuffer);
+        const decodePromise = (async () => {
+          const arrayBuffer = await blob.arrayBuffer();
+          return await audioContextRef.current!.decodeAudioData(arrayBuffer);
+        })();
+
+        const [base64, decodedBuffer] = await Promise.all([base64Promise, decodePromise]);
+        
+        setAudioBase64(base64);
         setAudioBuffer(decodedBuffer);
         setStep(Step.IMAGE_UPLOAD);
       };
@@ -170,43 +184,52 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
     if (id) {
+      console.log("Found share ID, loading memory:", id);
       setIsLoadingMemory(true);
+      setLoadError(null);
+      
       // Safety timeout to prevent infinite loading state
       const timeoutId = setTimeout(() => {
         setIsLoadingMemory(false);
-      }, 8000);
+        setLoadError("Loading timed out. Please refresh.");
+      }, 12000);
 
       const loadMemory = async () => {
         try {
           const docRef = doc(db, 'memories', id);
           const docSnap = await getDoc(docRef);
+          
           if (docSnap.exists()) {
             const data = docSnap.data();
-            setImages(data.images || []);
             setShareId(id);
             
-            // Initialize context without blocking on resume
-            if (!audioContextRef.current) {
-              audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-            }
-            
-            // Manual decoding is more reliable for Data URLs in some environments
-            const audioData = data.audioData;
-            if (audioData && audioData.includes(',')) {
-              const base64 = audioData.split(',')[1];
-              const binaryString = window.atob(base64);
-              const bytes = new Uint8Array(binaryString.length);
-              for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
+            // Start audio decoding immediately without waiting for images
+            const audioPromise = (async () => {
+              const audioData = data.audioData;
+              if (!audioData) throw new Error("No audio data");
+              
+              if (!audioContextRef.current) {
+                audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
               }
               
-              const decodedBuffer = await audioContextRef.current.decodeAudioData(bytes.buffer);
-              setAudioBuffer(decodedBuffer);
-              setStep(Step.KEEPSAKE_PLAYER);
-            }
+              const response = await fetch(audioData);
+              const arrayBuffer = await response.arrayBuffer();
+              return await audioContextRef.current.decodeAudioData(arrayBuffer);
+            })();
+
+            // Set images immediately
+            setImages(data.images || []);
+            
+            // Wait for audio to finish decoding
+            const decodedBuffer = await audioPromise;
+            setAudioBuffer(decodedBuffer);
+            setStep(Step.KEEPSAKE_PLAYER);
+          } else {
+            throw new Error("Memory not found");
           }
         } catch (err) {
           console.error("Error loading memory:", err);
+          setLoadError(err instanceof Error ? err.message : "Failed to load memory");
         } finally {
           clearTimeout(timeoutId);
           setIsLoadingMemory(false);
@@ -260,7 +283,29 @@ export default function App() {
           </motion.div>
         )}
 
-        {!isLoadingMemory && step === Step.LANDING && (
+        {loadError && (
+          <motion.div
+            key="load-error"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center p-8 glass rounded-3xl border border-red-500/30 max-w-sm mx-4"
+          >
+            <X className="text-red-500 mx-auto mb-4" size={48} />
+            <h2 className="text-xl font-serif text-beige mb-2">Couldn't open memory</h2>
+            <p className="text-mocha text-sm mb-6">{loadError}</p>
+            <button 
+              onClick={() => {
+                setLoadError(null);
+                setStep(Step.LANDING);
+              }}
+              className="bg-mocha text-cream px-8 py-3 rounded-xl font-bold"
+            >
+              Go to Home
+            </button>
+          </motion.div>
+        )}
+
+        {!isLoadingMemory && !loadError && step === Step.LANDING && (
           <motion.div
             key="landing"
             initial={{ opacity: 0, scale: 0.9 }}
