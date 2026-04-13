@@ -1,0 +1,6 @@
+{
+  "name": "Vinyl Birthday Surprise",
+  "description": "A cozy, interactive birthday surprise with a voice note vinyl player and a virtual cake.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": []
+}

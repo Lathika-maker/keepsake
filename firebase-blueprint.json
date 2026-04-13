@@ -1,0 +1,34 @@
+{
+  "entities": {
+    "Memory": {
+      "title": "Memory",
+      "description": "A birthday memory containing a voice note and images.",
+      "type": "object",
+      "properties": {
+        "audioData": {
+          "type": "string",
+          "description": "Base64 encoded audio data."
+        },
+        "images": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Array of base64 encoded images."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the memory was created."
+        }
+      },
+      "required": ["audioData", "images", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/memories/{memoryId}": {
+      "schema": "Memory",
+      "description": "Collection of shared birthday memories."
+    }
+  }
+}

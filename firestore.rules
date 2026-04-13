@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: memories
+    // Document ID: auto-generated
+    // Fields:
+    //   - audioData: string (required) - Base64 encoded audio
+    //   - images: list (required) - Array of base64 strings
+    //   - createdAt: timestamp (required) - Creation time
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isValidMemory(data) {
+      return data.audioData is string && 
+             data.audioData.size() < 1048576 && // 1MB limit check
+             data.images is list &&
+             data.images.size() <= 20 &&
+             data.createdAt is timestamp;
+    }
+
+    match /memories/{memoryId} {
+      // Allow anyone to read a memory if they have the ID
+      allow read: if true;
+      
+      // Allow creation of memories
+      allow create: if isValidMemory(request.resource.data);
+      
+      // No updates or deletes allowed for now to keep memories immutable
+      allow update, delete: if false;
+    }
+  }
+}

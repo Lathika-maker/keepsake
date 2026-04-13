@@ -1,0 +1,70 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", serif;
+  
+  --color-coffee: #3d2b1f;
+  --color-mocha: #6f4e37;
+  --color-beige: #d2b48c;
+  --color-cream: #fdfcf0;
+  --color-warm-brown: #8b5e3c;
+  --color-dark-bg: #2a1b12;
+}
+
+@layer base {
+  body {
+    @apply bg-dark-bg text-cream font-sans antialiased overflow-hidden;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(111, 78, 55, 0.1);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(111, 78, 55, 0.5);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(111, 78, 55, 0.8);
+  }
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.paper-texture {
+  background-color: #fff;
+  background-image: 
+    linear-gradient(90deg, rgba(255,0,0,.05) 50%, transparent 50%),
+    linear-gradient(rgba(255,0,0,.05) 50%, transparent 50%);
+  background-size: 4px 4px;
+}
+
+.paper-shadow {
+  box-shadow: 
+    0 10px 30px rgba(0,0,0,0.5),
+    0 0 10px rgba(0,0,0,0.2);
+}
+
+.scroll-container {
+  mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
