@@ -888,7 +888,7 @@ function KeepsakePlayer({ buffer, images, audioContext, onNext, onReset, shareId
         </div>
 
         <AnimatePresence>
-          {(isFinished || progress >= 95) && (
+          {(isFinished || progress >= 99.5) && (
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -976,11 +976,27 @@ function BirthdayCake({ onNext }: { onNext: () => void }) {
             setIsBlowing(true);
             setTimeout(() => {
               setCandlesOut(true);
+              
+              const scalar = 2.5;
+              const shapes = [
+                confetti.shapeFromText({ text: '🎂', scalar }),
+                confetti.shapeFromText({ text: '🎁', scalar }),
+                confetti.shapeFromText({ text: '🎈', scalar }),
+                confetti.shapeFromText({ text: '✨', scalar }),
+                confetti.shapeFromText({ text: '🍰', scalar }),
+                confetti.shapeFromText({ text: '🎉', scalar }),
+                confetti.shapeFromText({ text: '🎊', scalar }),
+                'circle',
+                'square'
+              ];
+
               confetti({
-                particleCount: 150,
-                spread: 70,
+                particleCount: 200,
+                spread: 90,
                 origin: { y: 0.6 },
-                colors: [COLORS.mocha, COLORS.beige, '#FFD700', '#FF69B4']
+                colors: [COLORS.mocha, COLORS.beige, '#FFD700', '#FF69B4', '#87CEEB'],
+                shapes: shapes as any,
+                scalar
               });
             }, 500);
           } else {
@@ -1082,11 +1098,27 @@ function BirthdayCake({ onNext }: { onNext: () => void }) {
         <button 
           onClick={() => {
             setCandlesOut(true);
+            
+            const scalar = 2.5;
+            const shapes = [
+              confetti.shapeFromText({ text: '🎂', scalar }),
+              confetti.shapeFromText({ text: '🎁', scalar }),
+              confetti.shapeFromText({ text: '🎈', scalar }),
+              confetti.shapeFromText({ text: '✨', scalar }),
+              confetti.shapeFromText({ text: '🍰', scalar }),
+              confetti.shapeFromText({ text: '🎉', scalar }),
+              confetti.shapeFromText({ text: '🎊', scalar }),
+              'circle',
+              'square'
+            ];
+
             confetti({
-              particleCount: 150,
-              spread: 70,
+              particleCount: 200,
+              spread: 90,
               origin: { y: 0.6 },
-              colors: [COLORS.mocha, COLORS.beige, '#FFD700', '#FF69B4']
+              colors: [COLORS.mocha, COLORS.beige, '#FFD700', '#FF69B4', '#87CEEB'],
+              shapes: shapes as any,
+              scalar
             });
           }}
           className="mt-12 text-sm text-mocha/50 hover:text-mocha underline uppercase tracking-[0.2em] font-bold transition-colors"
